@@ -1,0 +1,169 @@
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NET KALKAN</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 20px;
+    background: #080808;
+    color: white;
+    font-family: Arial, sans-serif;
+}
+
+.container {
+    max-width: 850px;
+    margin: auto;
+}
+
+header {
+    padding: 22px;
+    background: #111;
+    border: 1px solid #292929;
+    border-radius: 12px;
+    margin-bottom: 25px;
+}
+
+.logo {
+    font-size: 28px;
+    font-weight: bold;
+    color: #65ff9a;
+}
+
+.subtitle {
+    color: #aaa;
+    margin-top: 10px;
+}
+
+.panel {
+    background: #111;
+    border: 1px solid #292929;
+    border-radius: 12px;
+    padding: 22px;
+    margin-bottom: 20px;
+}
+
+h2 {
+    font-size: 20px;
+    margin-top: 0;
+}
+
+input {
+    width: 100%;
+    padding: 16px;
+    background: #080808;
+    border: 1px solid #444;
+    border-radius: 8px;
+    color: white;
+    font-size: 16px;
+    margin: 12px 0;
+}
+
+button {
+    width: 100%;
+    padding: 16px;
+    background: #65ff9a;
+    color: #080808;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+button:active {
+    opacity: .7;
+}
+
+.status {
+    color: #65ff9a;
+    padding: 12px;
+    background: #17251b;
+    border-radius: 8px;
+}
+
+.info {
+    color: #aaa;
+    line-height: 1.7;
+}
+
+.footer {
+    text-align: center;
+    color: #666;
+    padding: 25px;
+    font-size: 13px;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<header>
+    <div class="logo">🛡️ NET KALKAN</div>
+    <div class="subtitle">
+        Türkiye Yasa Dışı Bahis Sitesi Kontrol Sistemi
+    </div>
+</header>
+
+<div class="panel">
+    <h2>🔍 Manuel Site Kontrolü</h2>
+
+    <p class="info">
+        Kontrol etmek istediğin internet sitesinin adresini gir.
+    </p>
+
+    <form action="/" method="POST">
+        <input
+            type="url"
+            name="url"
+            placeholder="https://ornek-site.com"
+            required
+        >
+
+        <button type="submit">
+            SİTEYİ KONTROL ET
+        </button>
+    </form>
+</div>
+
+<div class="panel">
+    <h2>⚙️ Otomatik Tarama</h2>
+
+    <p class="info">
+        Sistem, tanımlanan kaynaklardaki şüpheli internet
+        adreslerini kontrol etmek için tasarlanmıştır.
+    </p>
+
+    <div class="status">
+        Sistem arayüzü hazır
+    </div>
+</div>
+
+<div class="panel">
+    <h2>🛡️ Güvenlik Bilgisi</h2>
+
+    <p class="info">
+        NET KALKAN, internet adreslerini incelemeye
+        yardımcı olan bir araştırma ve kontrol aracıdır.
+        Sonuçlar kesin hukuki tespit değildir.
+    </p>
+</div>
+
+<div class="footer">
+    NET KALKAN © 2026
+    <br>
+    Güvenli internet için geliştirildi.
+</div>
+
+</div>
+</body>
+</html>
