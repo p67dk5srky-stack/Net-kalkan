@@ -7,38 +7,241 @@
 <title>NET KALKAN</title>
 
 <style>
-*{box-sizing:border-box}
-body{margin:0;padding:18px;background:#070707;color:#eee;font-family:Arial,sans-serif}
-.container{max-width:1050px;margin:auto}
-header,.panel{background:#111;border:1px solid #292929;border-radius:14px;padding:22px;margin-bottom:18px}
-.logo{font-size:29px;font-weight:bold;color:#65ff9a}
-.subtitle,.muted{color:#999;line-height:1.6}
-h2{font-size:19px;margin-top:0}
-input{width:100%;padding:15px;background:#080808;border:1px solid #444;border-radius:8px;color:white;font-size:16px;margin:10px 0}
-button{border:0;border-radius:8px;padding:13px 16px;font-weight:bold;cursor:pointer}
-.primary{background:#65ff9a;color:#080808;width:100%}
-.secondary{background:#252525;color:white;width:100%;margin-top:8px}
-.danger{background:#492020;color:#ffaaaa}
-.small{padding:8px 11px;font-size:12px}
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-.stat{background:#191919;border:1px solid #303030;padding:17px;border-radius:10px}
-.stat strong{display:block;font-size:25px;color:#65ff9a;margin-top:7px}
-.result{padding:13px;border-radius:8px;background:#17251b;color:#a5ffbd;margin-bottom:10px;overflow-wrap:anywhere}
-.error{background:#351919;color:#ffaaaa}
-.item{background:#191919;border:1px solid #303030;padding:14px;border-radius:9px;margin:10px 0;overflow-wrap:anywhere}
-.item form{display:inline-block;margin:5px 5px 0 0}
-.rating{color:#ffd166;font-size:18px;letter-spacing:2px}
-table{width:100%;border-collapse:collapse;font-size:13px}
-th,td{text-align:left;padding:11px;border-bottom:1px solid #292929;vertical-align:top;overflow-wrap:anywhere}
-.table-wrap{overflow-x:auto}
-.green{color:#65ff9a}
-.red{color:#ff7777}
-.footer{text-align:center;color:#666;padding:25px;font-size:12px}
-@media(max-width:650px){
- body{padding:10px}
- header,.panel{padding:16px}
- .stats{grid-template-columns:1fr}
- table{min-width:650px}
+:root {
+    --bg: #070909;
+    --panel: #101514;
+    --panel2: #151c19;
+    --border: #26352d;
+    --green: #65ff9a;
+    --text: #edf5ef;
+    --muted: #94a39a;
+    --red: #ff7777;
+    --yellow: #ffd166;
+}
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    padding: 20px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: Arial, sans-serif;
+}
+
+.container {
+    max-width: 1100px;
+    margin: auto;
+}
+
+header, .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 15px;
+    padding: 22px;
+    margin-bottom: 18px;
+}
+
+header {
+    background: linear-gradient(135deg, #101b14, #101514);
+}
+
+.logo {
+    color: var(--green);
+    font-size: 30px;
+    font-weight: 900;
+    letter-spacing: 1px;
+}
+
+.subtitle, .muted {
+    color: var(--muted);
+    line-height: 1.6;
+}
+
+h2 {
+    font-size: 19px;
+    margin: 0 0 16px;
+}
+
+.stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.stat {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    padding: 18px;
+    border-radius: 11px;
+    color: var(--muted);
+}
+
+.stat strong {
+    display: block;
+    color: var(--green);
+    font-size: 27px;
+    margin-top: 9px;
+}
+
+input {
+    width: 100%;
+    padding: 15px;
+    background: #080c0a;
+    border: 1px solid #35483b;
+    border-radius: 9px;
+    color: white;
+    font-size: 16px;
+    margin: 9px 0;
+}
+
+input:focus {
+    outline: 1px solid var(--green);
+    border-color: var(--green);
+}
+
+button {
+    border: 0;
+    border-radius: 8px;
+    padding: 13px 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: .2s;
+}
+
+button:hover {
+    filter: brightness(1.15);
+}
+
+.primary {
+    background: var(--green);
+    color: #071009;
+    width: 100%;
+}
+
+.secondary {
+    background: #26352d;
+    color: white;
+    width: 100%;
+    margin-top: 8px;
+}
+
+.danger {
+    background: #492020;
+    color: #ffaaaa;
+}
+
+.small {
+    padding: 8px 12px;
+    font-size: 12px;
+}
+
+.result {
+    padding: 14px;
+    border-radius: 9px;
+    background: #17251b;
+    color: #a5ffbd;
+    margin-bottom: 10px;
+    overflow-wrap: anywhere;
+}
+
+.error {
+    background: #351919;
+    color: #ffaaaa;
+}
+
+.blocked {
+    background: #302713;
+    color: var(--yellow);
+}
+
+.item {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    padding: 15px;
+    border-radius: 10px;
+    margin: 10px 0;
+    overflow-wrap: anywhere;
+}
+
+.item form {
+    display: inline-block;
+    margin: 5px 5px 0 0;
+}
+
+.rating {
+    color: var(--yellow);
+    font-size: 18px;
+    letter-spacing: 2px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+th, td {
+    text-align: left;
+    padding: 12px;
+    border-bottom: 1px solid #29352e;
+    vertical-align: top;
+    overflow-wrap: anywhere;
+}
+
+th {
+    color: var(--green);
+    background: #151c19;
+}
+
+.table-wrap {
+    overflow-x: auto;
+}
+
+.green { color: var(--green); }
+.red { color: var(--red); }
+.yellow { color: var(--yellow); }
+
+.status {
+    display: inline-block;
+    padding: 5px 9px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: bold;
+    background: #1c3023;
+    color: var(--green);
+}
+
+.status-blocked {
+    background: #302713;
+    color: var(--yellow);
+}
+
+.status-error {
+    background: #351919;
+    color: var(--red);
+}
+
+.note {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.5;
+    margin-top: 7px;
+    max-width: 360px;
+}
+
+.footer {
+    text-align: center;
+    color: #66736a;
+    padding: 25px;
+    font-size: 12px;
+}
+
+@media(max-width: 650px) {
+    body { padding: 10px; }
+    header, .panel { padding: 16px; }
+    .stats { grid-template-columns: 1fr; }
+    .logo { font-size: 25px; }
+    table { min-width: 720px; }
 }
 </style>
 </head>
@@ -48,71 +251,119 @@ th,td{text-align:left;padding:11px;border-bottom:1px solid #292929;vertical-alig
 
 <header>
     <div class="logo">🛡️ NET KALKAN</div>
-    <div class="subtitle">Türkiye için internet sitesi güvenlik ve şüpheli bahis göstergesi kontrol sistemi</div>
+    <div class="subtitle">
+        Türkiye için şüpheli bahis ve internet sitesi gösterge kontrol sistemi
+    </div>
 </header>
 
 {% with messages = get_flashed_messages(with_categories=true) %}
 {% if messages %}
-{% for category,message in messages %}
-<div class="result {% if category == 'error' %}error{% endif %}">{{ message }}</div>
-{% endfor %}
+    {% for category, message in messages %}
+        <div class="result {% if category == 'error' %}error{% endif %}">
+            {{ message }}
+        </div>
+    {% endfor %}
 {% endif %}
 {% endwith %}
 
 <div class="panel">
     <h2>📊 Sistem Durumu</h2>
+
     <div class="stats">
-        <div class="stat">Toplam kontrol<strong>{{ total_scans }}</strong></div>
-        <div class="stat">Yüksek risk işareti<strong>{{ high_risk }}</strong></div>
-        <div class="stat">İzleme listesi<strong>{{ watch|length }}</strong></div>
+        <div class="stat">
+            Toplam kontrol
+            <strong>{{ total_scans }}</strong>
+        </div>
+
+        <div class="stat">
+            Yüksek risk işareti
+            <strong>{{ high_risk }}</strong>
+        </div>
+
+        <div class="stat">
+            İzleme listesi
+            <strong>{{ watch|length }}</strong>
+        </div>
     </div>
 
-    <form method="POST" onsubmit="return confirm('Sayaçlar sıfırlansın mı? Eski tarama geçmişi silinmeyecek.')">
+    <form method="POST"
+          onsubmit="return confirm('Sayaçlar sıfırlansın mı? Tarama geçmişi korunacak.')">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <input type="hidden" name="action" value="reset_stats">
-        <button class="danger" type="submit" style="width:100%;margin-top:14px">
+        <button class="danger" type="submit"
+                style="width:100%;margin-top:14px">
             SAYAÇLARI SIFIRLA
         </button>
     </form>
-    <p class="muted">Bu işlem yalnızca toplam ve yüksek risk sayaçlarını sıfırlar. Tarama geçmişi korunur.</p>
+
+    <p class="muted">
+        Sayaç sıfırlama işlemi tarama geçmişini silmez.
+    </p>
 </div>
 
 <div class="panel">
     <h2>🔍 Manuel Site Kontrolü</h2>
-    <p class="muted">Kontrol etmek istediğin herkese açık internet sitesinin adresini yaz.</p>
+
+    <p class="muted">
+        Kontrol etmek istediğin herkese açık internet sitesinin adresini gir.
+    </p>
 
     <form method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <input type="hidden" name="action" value="scan">
-        <input type="url" name="url" placeholder="https://ornek-site.com" required>
-        <button class="primary" type="submit">SİTEYİ KONTROL ET</button>
+
+        <input type="url" name="url"
+               placeholder="https://ornek-site.com"
+               required>
+
+        <button class="primary" type="submit">
+            SİTEYİ KONTROL ET
+        </button>
     </form>
 </div>
 
 <div class="panel">
     <h2>⭐ İzleme Listesine Ekle</h2>
-    <p class="muted">Eklediğin adresleri daha sonra toplu olarak kontrol edebilirsin.</p>
+
+    <p class="muted">
+        Eklediğin adresleri daha sonra toplu olarak kontrol edebilirsin.
+    </p>
 
     <form method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <input type="hidden" name="action" value="add">
-        <input type="url" name="url" placeholder="https://ornek-site.com" required>
-        <button class="primary" type="submit">İZLEME LİSTESİNE EKLE</button>
+
+        <input type="url" name="url"
+               placeholder="https://ornek-site.com"
+               required>
+
+        <button class="primary" type="submit">
+            İZLEME LİSTESİNE EKLE
+        </button>
     </form>
 
     <form method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <input type="hidden" name="action" value="scan_watch">
-        <button class="secondary" type="submit">İZLEME LİSTESİNİ ŞİMDİ TARA</button>
+
+        <button class="secondary" type="submit">
+            İZLEME LİSTESİNİ ŞİMDİ TARA
+        </button>
     </form>
 </div>
 
 <div class="panel">
     <h2>⚙️ Otomatik İzleme</h2>
+
     <div class="result">
-        İzleme listesindeki aktif adresler, uygulama çalışır durumda olduğu sürece varsayılan olarak 6 saatte bir kontrol edilir.
+        Aktif izleme adresleri, uygulama çalışır durumda olduğu sürece
+        varsayılan olarak 6 saatte bir kontrol edilir.
     </div>
-    <p class="muted">Barındırma hizmeti uygulamayı uykuya alırsa veya durdurursa otomatik tarama da durabilir.</p>
+
+    <p class="muted">
+        Barındırma hizmeti uygulamayı uykuya alırsa veya durdurursa
+        otomatik kontroller de durabilir.
+    </p>
 </div>
 
 <div class="panel">
@@ -122,34 +373,47 @@ th,td{text-align:left;padding:11px;border-bottom:1px solid #292929;vertical-alig
         {% for item in watch %}
         <div class="item">
             <strong>{{ item["url"] }}</strong>
+
             <p class="muted">
                 Durum:
                 {% if item["enabled"] == 1 %}
-                    <span class="green">Aktif</span>
+                    <span class="green">● Aktif</span>
                 {% else %}
-                    <span class="red">Pasif</span>
+                    <span class="red">● Pasif</span>
                 {% endif %}
+
                 <br>
-                Son kontrol: {{ item["last_checked"] or "Henüz kontrol edilmedi" }}
+
+                Son kontrol:
+                {{ item["last_checked"] or "Henüz kontrol edilmedi" }}
             </p>
 
             <form method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <input type="hidden" name="action" value="toggle">
                 <input type="hidden" name="item_id" value="{{ item['id'] }}">
-                <button class="secondary small" type="submit">Aktif/Pasif</button>
+
+                <button class="secondary small" type="submit">
+                    Aktif / Pasif
+                </button>
             </form>
 
-            <form method="POST" onsubmit="return confirm('Bu adres silinsin mi?')">
+            <form method="POST"
+                  onsubmit="return confirm('Bu adres silinsin mi?')">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <input type="hidden" name="action" value="delete">
                 <input type="hidden" name="item_id" value="{{ item['id'] }}">
-                <button class="danger small" type="submit">Sil</button>
+
+                <button class="danger small" type="submit">
+                    Sil
+                </button>
             </form>
         </div>
         {% endfor %}
     {% else %}
-        <p class="muted">Henüz izleme listesine adres eklenmedi.</p>
+        <p class="muted">
+            Henüz izleme listesine adres eklenmedi.
+        </p>
     {% endif %}
 </div>
 
@@ -158,48 +422,95 @@ th,td{text-align:left;padding:11px;border-bottom:1px solid #292929;vertical-alig
 
     {% if scans %}
     <div class="table-wrap">
-    <table>
-        <thead>
-            <tr>
-                <th>Adres</th>
-                <th>Sonuç</th>
-                <th>Risk</th>
-                <th>Eşleşmeler</th>
-                <th>Tarih</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for scan in scans %}
-            <tr>
-                <td>{{ scan["url"] }}</td>
-                <td>{{ scan["status"] }}</td>
-                <td>
-                    {% if scan["rating"] > 0 %}
-                    <span class="rating">{{ "★" * scan["rating"] }}{{ "☆" * (5-scan["rating"]) }}</span>
-                    <br>{{ scan["rating"] }}/5
-                    {% else %}
-                    <span class="red">Puan verilemedi</span>
-                    {% endif %}
-                </td>
-                <td>{{ scan["matched"] or "Yok" }}</td>
-                <td>{{ scan["checked_at"] }}</td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+        <table>
+            <thead>
+                <tr>
+                    <th>Adres</th>
+                    <th>Sonuç</th>
+                    <th>Risk</th>
+                    <th>Eşleşmeler</th>
+                    <th>Açıklama</th>
+                    <th>Tarih</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for scan in scans %}
+                <tr>
+                    <td>{{ scan["url"] }}</td>
+
+                    <td>
+                        {% if scan["status"] == "Doğrulama engeli" %}
+                            <span class="status status-blocked">
+                                Doğrulama engeli
+                            </span>
+                        {% elif scan["status"] == "Tarama başarısız" %}
+                            <span class="status status-error">
+                                Tarama başarısız
+                            </span>
+                        {% else %}
+                            <span class="status">
+                                {{ scan["status"] }}
+                            </span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if scan["rating"] > 0 %}
+                            <span class="rating">
+                                {{ "★" * scan["rating"] }}{{ "☆" * (5-scan["rating"]) }}
+                            </span>
+                            <br>
+                            {{ scan["rating"] }}/5
+                        {% else %}
+                            <span class="red">Puan verilemedi</span>
+                        {% endif %}
+                    </td>
+
+                    <td>{{ scan["matched"] or "Yok" }}</td>
+
+                    <td>
+                        <div class="note">
+                            {{ scan["note"] or scan["reason"] or "Ek açıklama yok." }}
+                        </div>
+                    </td>
+
+                    <td>{{ scan["checked_at"] }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
+
     {% else %}
-        <p class="muted">Henüz kontrol geçmişi yok.</p>
+        <p class="muted">
+            Henüz kontrol geçmişi yok.
+        </p>
     {% endif %}
 </div>
 
 <div class="panel">
-    <h2>🛡️ Güvenlik Bilgisi</h2>
+    <h2>🛡️ Güvenlik ve Tarama Bilgisi</h2>
+
     <p class="muted">
-        NET KALKAN herkese açık internet sayfalarında şüpheli ifadeleri arar.
-        Risk puanı yalnızca bulunan ifadelerin sayısına dayalı ön değerlendirmedir.
-        Kesin hukuki tespit değildir. Sistem giriş yapmaz, CAPTCHA aşmaz ve özel alanlara erişmez.
-        JavaScript ile sonradan yüklenen içerikleri bu sürüm henüz incelemez.
+        NET KALKAN herkese açık internet sayfalarını inceler ve
+        şüpheli bahis göstergelerini arar.
+    </p>
+
+    <p class="muted">
+        Risk puanı bulunan ifadeler üzerinden yapılan ön değerlendirmedir.
+        Bir sitenin yasa dışı olduğunu tek başına kanıtlamaz.
+    </p>
+
+    <p class="muted">
+        Sistem CAPTCHA veya güvenlik doğrulamalarını aşmaz,
+        özel hesaplara giriş yapmaz ve erişim engellerini atlatmaz.
+        Doğrulama engeli görüldüğünde bu durum ayrı olarak kaydedilir.
+    </p>
+
+    <p class="muted">
+        Bu sürüm herkese açık HTML sayfalarını inceler.
+        JavaScript ile sonradan yüklenen içerikler henüz taranmaz.
     </p>
 </div>
 
