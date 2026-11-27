@@ -87,7 +87,6 @@ def init_db():
             )
         """)
 
-        # Eski veritabanlarında eksik olabilecek sütunları ekle.
         scan_columns = {
             row["name"] for row in
             con.execute("PRAGMA table_info(scans)").fetchall()
@@ -229,6 +228,58 @@ def fetch_page(url, expected_host):
     raise ValueError("Çok fazla yönlendirme yapıldı.")
 
 
+def detect_verification_wall(html, headers=None):
+    text = (html or "").lower()
+
+    header_text = " ".join(
+        f"{key}: {value}" for key, value in (headers or {}).items()
+    ).lower()
+
+    indicators = [
+        "captcha",
+        "g-recaptcha",
+        "hcaptcha",
+        "h-captcha",
+        "cf-turnstile",
+        "challenges.cloudflare.com",
+        "verify you are human",
+        "checking your browser",
+        "just a moment",
+        "security verification",
+        "robot olmadığınızı",
+        "güvenlik doğrulaması",
+        "cf-chl-",
+        "challenge-platform",
+        "__cf_chl"
+    ]
+
+    return [
+        item for item in indicators
+        if item in text or item in header_text
+    ]
+
+
+def save_verification_scan(url, host, indicators, http_code):
+    message = (
+        "Güvenlik doğrulaması algılandı. "
+        "Otomatik olarak aşılmadı. "
+        f"HTTP {http_code}. "
+        f"İşaretler: {', '.join(indicators[:6])}"
+    )
+
+    with db() as con:
+        con.execute("""
+            INSERT INTO scans
+            (url, domain, checked_at, status, matched, note, rating, reason)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            url, host, now(), "Doğrulama engeli",
+            "", message, 0, message
+        ))
+
+    return message
+
+
 def calculate_rating(matched):
     count = len(matched)
 
@@ -287,11 +338,51 @@ def scan_one(raw):
                 if pages == 0:
                     http_code = str(response.status_code)
 
+                content_type = response.headers.get(
+                    "Content-Type", ""
+                ).lower()
+
+                # 403 ve 429 yanıtlarında doğrulama ekranı olup olmadığını kontrol et.
+                if response.status_code in (403, 429):
+                    chunks = []
+                    read_bytes = 0
+
+                    for chunk in response.iter_content(8192):
+                        if not chunk:
+                            continue
+
+                        remaining = 100_000 - read_bytes
+                        if remaining <= 0:
+                            break
+
+                        chunk = chunk[:remaining]
+                        chunks.append(chunk)
+                        read_bytes += len(chunk)
+
+                    error_body = b"".join(chunks).decode(
+                        response.encoding or "utf-8",
+                        errors="ignore"
+                    )
+
+                    indicators = detect_verification_wall(
+                        error_body, response.headers
+                    )
+
+                    if indicators:
+                        message = save_verification_scan(
+                            start_url, host, indicators,
+                            response.status_code
+                        )
+                        return "Doğrulama engeli", [], message, 0, message
+
+                    errors.append(
+                        f"HTTP {response.status_code}: Erişim engeli veya hız sınırı."
+                    )
+                    continue
+
                 if response.status_code >= 400:
                     errors.append(f"HTTP {response.status_code}")
                     continue
-
-                content_type = response.headers.get("Content-Type", "").lower()
 
                 if not any(x in content_type for x in (
                     "text/html", "text/plain", "application/xhtml"
@@ -324,6 +415,18 @@ def scan_one(raw):
                 )
 
                 pages += 1
+
+                indicators = detect_verification_wall(
+                    body, response.headers
+                )
+
+                if indicators:
+                    message = save_verification_scan(
+                        start_url, host, indicators,
+                        response.status_code
+                    )
+                    return "Doğrulama engeli", [], message, 0, message
+
                 body_lower = body.lower()
 
                 for keyword in KEYWORDS:
