@@ -54,8 +54,8 @@ def scan_one(raw):
     url, host = validate_public_url(raw)
     try:
         # Redirects are deliberately not followed. One public homepage request only.
-        r = requests.get(url, headers=HEADERS, timeout=8, allow_redirects=False,
-                         stream=True, verify=True)
+     r = requests.get(url, headers=HEADERS, timeout=8, allow_redirects=True,
+                 stream=True, verify=True)   
         chunks, total = [], 0
         for chunk in r.iter_content(8192):
             if not chunk: continue
