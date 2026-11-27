@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NET KALKAN</title>
+<style>
+:root{color-scheme:dark;--bg:#080b12;--panel:#111827;--line:#263244;--muted:#9aa8bb;--text:#edf3fb;--cyan:#42d6c5;--red:#ff7474}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 80% 0,#14243a 0,transparent 35%),var(--bg);color:var(--text);font:15px system-ui}
+main{max-width:1050px;margin:auto;padding:24px 16px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+h1{margin:0;font-size:27px;letter-spacing:2px}.sub,.muted{color:var(--muted)}.pill{border:1px solid #24645f;color:var(--cyan);padding:6px 10px;border-radius:30px;font-size:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:20px 0}
+.card{background:linear-gradient(145deg,#141e2d,#0e1521);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 12px 32px #0004}
+h2{font-size:17px;margin:0 0 14px}input{width:100%;background:#080e18;border:1px solid #34445a;border-radius:10px;padding:13px;color:white;margin:8px 0}
+button{background:var(--cyan);border:0;border-radius:10px;padding:11px 14px;font-weight:700;color:#06211f;cursor:pointer;margin:5px 4px 0 0}
+button.secondary{background:#243449;color:#e7f0fb}table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--muted)}
+.flash{padding:12px;border-radius:10px;background:#12312f;margin:12px 0}.error{background:#421f29}.tag{color:var(--cyan)}
+.small{font-size:12px;color:var(--muted);line-height:1.5}
+@media(max-width:600px){main{padding:18px 12px}h1{font-size:23px}table{display:block;overflow-x:auto;white-space:nowrap}}
+</style></head><body><main>
+<div class="top"><div><h1>🛡️ NET KALKAN</h1><div class="sub">Açık kaynak inceleme ve şüpheli site takip paneli</div></div><span class="pill">ÖZEL ÇALIŞMA ALANI</span></div>
+{% with messages = get_flashed_messages(with_categories=true) %}{% for category,message in messages %}<div class="flash {{'error' if category=='error' else ''}}">{{message}}</div>{% endfor %}{% endwith %}
+<div class="grid">
+<section class="card"><h2>Elle site kontrolü</h2><form method="post"><input name="url" type="url" placeholder="https://ornek-site.com" required><button name="action" value="scan">Şimdi kontrol et</button><button class="secondary" name="action" value="add">İzleme listesine ekle</button></form><p class="small">Yalnızca herkese açık ana sayfaya sınırlı istek yapılır. Giriş, form, CAPTCHA, özel panel veya yönlendirme zinciri denenmez.</p></section>
+<section class="card"><h2>İzleme listesi</h2><p class="muted">{{watch|length}} adres kayıtlı</p><form method="post" action="{{url_for('scan_watchlist')}}"><button>Listedekileri şimdi kontrol et</button></form><p class="small">Bu sürümde otomatik zamanlayıcı henüz etkin değil. Sürekli otomatik tarama için barındırma ortamında güvenli zamanlanmış görev kurulacak.</p></section>
+</div>
+<section class="card"><h2>Son kontroller</h2>{% if scans %}<table><tr><th>Adres</th><th>Durum</th><th>Eşleşme</th><th>Tarih</th></tr>{% for s in scans %}<tr><td>{{s.domain}}</td><td>{{s.status}}</td><td>{{s.matched or '—'}}</td><td>{{s.checked_at[:19]}}</td></tr>{% endfor %}</table>{% else %}<p class="muted">Henüz kontrol yok.</p>{% endif %}</section>
+<section class="card" style="margin-top:14px"><h2>İzlenen adresler</h2>{% if watch %}<table><tr><th>Adres</th><th>Son kontrol</th><th></th></tr>{% for w in watch %}<tr><td>{{w.url}}</td><td>{{w.last_checked or 'Henüz kontrol edilmedi'}}</td><td><form method="post" action="{{url_for('delete_watch',item_id=w.id)}}"><button class="secondary">Kaldır</button></form></td></tr>{% endfor %}</table>{% else %}<p class="muted">Henüz izleme listesi boş.</p>{% endif %}</section>
+<p class="small" style="margin-top:18px">Uyarı: Anahtar kelime eşleşmesi yasa dışılık kanıtı değildir. Sonuçlar yalnızca ön inceleme işaretidir. Bu panel henüz resmî kuruma otomatik ihbar göndermez. Üretimde kullanmadan önce kimlik doğrulama, HTTPS, erişim sınırları, güvenli gizli anahtar ve veri saklama politikası eklenmelidir.</p>
+</main></body></html>
