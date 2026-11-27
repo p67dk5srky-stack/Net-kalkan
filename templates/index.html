@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -65,6 +66,15 @@ th,td{text-align:left;padding:11px;border-bottom:1px solid #292929;vertical-alig
         <div class="stat">Yüksek risk işareti<strong>{{ high_risk }}</strong></div>
         <div class="stat">İzleme listesi<strong>{{ watch|length }}</strong></div>
     </div>
+
+    <form method="POST" onsubmit="return confirm('Sayaçlar sıfırlansın mı? Eski tarama geçmişi silinmeyecek.')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="action" value="reset_stats">
+        <button class="danger" type="submit" style="width:100%;margin-top:14px">
+            SAYAÇLARI SIFIRLA
+        </button>
+    </form>
+    <p class="muted">Bu işlem yalnızca toplam ve yüksek risk sayaçlarını sıfırlar. Tarama geçmişi korunur.</p>
 </div>
 
 <div class="panel">
@@ -100,10 +110,9 @@ th,td{text-align:left;padding:11px;border-bottom:1px solid #292929;vertical-alig
 <div class="panel">
     <h2>⚙️ Otomatik İzleme</h2>
     <div class="result">
-        Otomatik kontrol etkinleştirildiğinde izleme listesindeki açık adresler belirlenen aralıklarla kontrol edilir.
-        Varsayılan aralık 6 saattir.
+        İzleme listesindeki aktif adresler, uygulama çalışır durumda olduğu sürece varsayılan olarak 6 saatte bir kontrol edilir.
     </div>
-    <p class="muted">Not: Barındırma hizmeti uygulamayı uykuya alırsa veya durdurursa otomatik tarama da durur.</p>
+    <p class="muted">Barındırma hizmeti uygulamayı uykuya alırsa veya durdurursa otomatik tarama da durabilir.</p>
 </div>
 
 <div class="panel">
@@ -128,9 +137,7 @@ th,td{text-align:left;padding:11px;border-bottom:1px solid #292929;vertical-alig
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <input type="hidden" name="action" value="toggle">
                 <input type="hidden" name="item_id" value="{{ item['id'] }}">
-                <button class="secondary small" type="submit">
-                    Aktif/Pasif
-                </button>
+                <button class="secondary small" type="submit">Aktif/Pasif</button>
             </form>
 
             <form method="POST" onsubmit="return confirm('Bu adres silinsin mi?')">
@@ -167,10 +174,12 @@ th,td{text-align:left;padding:11px;border-bottom:1px solid #292929;vertical-alig
                 <td>{{ scan["url"] }}</td>
                 <td>{{ scan["status"] }}</td>
                 <td>
-                    <span class="rating">
-                        {{ "★" * scan["rating"] }}{{ "☆" * (5-scan["rating"]) }}
-                    </span>
+                    {% if scan["rating"] > 0 %}
+                    <span class="rating">{{ "★" * scan["rating"] }}{{ "☆" * (5-scan["rating"]) }}</span>
                     <br>{{ scan["rating"] }}/5
+                    {% else %}
+                    <span class="red">Puan verilemedi</span>
+                    {% endif %}
                 </td>
                 <td>{{ scan["matched"] or "Yok" }}</td>
                 <td>{{ scan["checked_at"] }}</td>
@@ -187,10 +196,10 @@ th,td{text-align:left;padding:11px;border-bottom:1px solid #292929;vertical-alig
 <div class="panel">
     <h2>🛡️ Güvenlik Bilgisi</h2>
     <p class="muted">
-        NET KALKAN herkese açık internet sayfalarında belirli şüpheli ifadeleri arar.
-        Yıldız puanı yalnızca bulunan ifade sayısına dayalı ön değerlendirmedir.
-        Kesin hukuki tespit veya resmî kurum kararı değildir.
-        Sistem giriş yapmaz, CAPTCHA aşmaz ve özel alanlara erişmez.
+        NET KALKAN herkese açık internet sayfalarında şüpheli ifadeleri arar.
+        Risk puanı yalnızca bulunan ifadelerin sayısına dayalı ön değerlendirmedir.
+        Kesin hukuki tespit değildir. Sistem giriş yapmaz, CAPTCHA aşmaz ve özel alanlara erişmez.
+        JavaScript ile sonradan yüklenen içerikleri bu sürüm henüz incelemez.
     </p>
 </div>
 
