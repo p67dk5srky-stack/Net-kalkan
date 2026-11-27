@@ -1,3 +1,4 @@
+
 import os
 import re
 import time
@@ -9,29 +10,29 @@ from datetime import datetime, timezone
 from urllib.parse import urlparse, urljoin
 
 import requests
-from flask import (
-    Flask, request, render_template, redirect,
-    url_for, flash, session, abort
-)
+from flask import Flask, request, render_template, redirect, url_for, flash, session, abort
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "net-kalkan-local-change-this-key")
+app.secret_key = os.environ.get("SECRET_KEY", "net-kalkan-change-this-secret")
 
 DATABASE = os.environ.get("DATABASE_PATH", "net_kalkan.db")
 SCAN_INTERVAL = int(os.environ.get("SCAN_INTERVAL_HOURS", "6")) * 3600
 
 HEADERS = {
-    "User-Agent": "NET-KALKAN/1.0 (public website safety research)",
+    "User-Agent": "NET-KALKAN/2.0 Website Safety Scanner",
     "Accept": "text/html,application/xhtml+xml,text/plain"
 }
 
 KEYWORDS = [
     "kaçak bahis", "yasa dışı bahis", "yasadışı bahis",
-    "bahis oyna", "canlı bahis", "casino",
+    "bahis oyna", "canlı bahis", "casino", "casinos",
     "slot oyunları", "deneme bonusu", "hoşgeldin bonusu",
-    "yatırım bonusu", "bedava bahis", "bahis bonusu",
-    "free spin", "free spins", "betting",
-    "online casino", "sports betting", "casino bonus",
+    "hoş geldin bonusu", "yatırım bonusu", "bedava bahis",
+    "bahis bonusu", "free spin", "free spins", "betting",
+    "sports betting", "online casino", "casino bonus",
+    "live casino", "bet bonus", "deposit bonus",
+    "bahis sitesi", "canlı casino", "rulet", "blackjack",
+    "poker", "jackpot", "oranlar", "kupon yap",
     "papara ile yatırım", "kripto ile yatırım"
 ]
 
@@ -39,6 +40,7 @@ MAX_PAGES = 30
 MAX_PAGE_BYTES = 250_000
 MAX_TOTAL_BYTES = 3_000_000
 REQUEST_TIMEOUT = 8
+MAX_REDIRECTS = 3
 
 scan_lock = threading.Lock()
 
@@ -85,6 +87,34 @@ def init_db():
             )
         """)
 
+        # Eski veritabanlarında eksik olabilecek sütunları ekle.
+        scan_columns = {
+            row["name"] for row in
+            con.execute("PRAGMA table_info(scans)").fetchall()
+        }
+
+        if "rating" not in scan_columns:
+            con.execute("ALTER TABLE scans ADD COLUMN rating INTEGER DEFAULT 1")
+
+        if "reason" not in scan_columns:
+            con.execute("ALTER TABLE scans ADD COLUMN reason TEXT DEFAULT ''")
+
+        watch_columns = {
+            row["name"] for row in
+            con.execute("PRAGMA table_info(watchlist)").fetchall()
+        }
+
+        if "enabled" not in watch_columns:
+            con.execute("ALTER TABLE watchlist ADD COLUMN enabled INTEGER DEFAULT 1")
+
+        if "last_checked" not in watch_columns:
+            con.execute("ALTER TABLE watchlist ADD COLUMN last_checked TEXT DEFAULT ''")
+
+        con.execute("""
+            INSERT OR IGNORE INTO settings(name, value)
+            VALUES('counter_reset_at', '1970-01-01T00:00:00+00:00')
+        """)
+
         con.execute("""
             INSERT OR IGNORE INTO settings(name, value)
             VALUES('last_auto_scan', '')
@@ -124,7 +154,12 @@ def validate_public_url(raw):
     if parsed.username or parsed.password:
         raise ValueError("Kullanıcı bilgisi içeren adresler kabul edilmez.")
 
-    if parsed.port not in (None, 80, 443):
+    try:
+        port = parsed.port
+    except ValueError:
+        raise ValueError("Adresin bağlantı noktası geçersiz.")
+
+    if port not in (None, 80, 443):
         raise ValueError("Yalnızca standart web bağlantı noktaları kullanılabilir.")
 
     host = normalize_host(parsed.hostname)
@@ -161,22 +196,37 @@ def validate_public_url(raw):
     return clean, host
 
 
-def safe_request(url, expected_host):
-    clean, host = validate_public_url(url)
+def fetch_page(url, expected_host):
+    current = url
 
-    if host != expected_host:
-        raise ValueError("Farklı alan adına geçiş engellendi.")
+    for _ in range(MAX_REDIRECTS + 1):
+        current, current_host = validate_public_url(current)
 
-    response = requests.get(
-        clean,
-        headers=HEADERS,
-        timeout=REQUEST_TIMEOUT,
-        allow_redirects=False,
-        stream=True,
-        verify=True
-    )
+        if current_host != expected_host:
+            raise ValueError("Farklı alan adına yönlendirme engellendi.")
 
-    return response
+        response = requests.get(
+            current,
+            headers=HEADERS,
+            timeout=REQUEST_TIMEOUT,
+            allow_redirects=False,
+            stream=True,
+            verify=True
+        )
+
+        if response.status_code in (301, 302, 303, 307, 308):
+            location = response.headers.get("Location")
+            response.close()
+
+            if not location:
+                raise ValueError("Yönlendirme adresi bulunamadı.")
+
+            current = urljoin(current, location)
+            continue
+
+        return response
+
+    raise ValueError("Çok fazla yönlendirme yapıldı.")
 
 
 def calculate_rating(matched):
@@ -192,9 +242,21 @@ def calculate_rating(matched):
         return 3, "Birden fazla şüpheli ifade bulundu. Ayrıntılı inceleme önerilir."
 
     if count <= 9:
-        return 4, "Çok sayıda şüpheli ifade bulundu. Yüksek risk işareti."
+        return 4, "Çok sayıda şüpheli ifade bulundu. Öncelikli inceleme önerilir."
 
     return 5, "Yoğun şüpheli ifade eşleşmesi bulundu. Öncelikli inceleme önerilir."
+
+
+def save_failed_scan(url, host, message):
+    with db() as con:
+        con.execute("""
+            INSERT INTO scans
+            (url, domain, checked_at, status, matched, note, rating, reason)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            url, host, now(), "Tarama başarısız",
+            "", message, 0, message
+        ))
 
 
 def scan_one(raw):
@@ -207,96 +269,101 @@ def scan_one(raw):
     pages = 0
     total_bytes = 0
     http_code = "Bilinmiyor"
+    errors = []
 
     while queue and pages < MAX_PAGES and total_bytes < MAX_TOTAL_BYTES:
         current = queue.pop(0)
 
         try:
             current, current_host = validate_public_url(current)
-        except ValueError:
-            continue
 
-        if current_host != host or current in seen:
-            continue
-
-        seen.add(current)
-
-        response = None
-
-        try:
-            response = safe_request(current, host)
-
-            if pages == 0:
-                http_code = str(response.status_code)
-
-            if response.status_code >= 400:
+            if current_host != host or current in seen:
                 continue
 
-            content_type = response.headers.get("Content-Type", "").lower()
+            seen.add(current)
+            response = fetch_page(current, host)
 
-            if not any(x in content_type for x in (
-                "text/html", "text/plain", "application/xhtml"
-            )):
-                continue
+            try:
+                if pages == 0:
+                    http_code = str(response.status_code)
 
-            chunks = []
-            page_bytes = 0
-
-            for chunk in response.iter_content(8192):
-                if not chunk:
+                if response.status_code >= 400:
+                    errors.append(f"HTTP {response.status_code}")
                     continue
 
-                remaining = min(
-                    MAX_PAGE_BYTES - page_bytes,
-                    MAX_TOTAL_BYTES - total_bytes
-                )
+                content_type = response.headers.get("Content-Type", "").lower()
 
-                if remaining <= 0:
-                    break
+                if not any(x in content_type for x in (
+                    "text/html", "text/plain", "application/xhtml"
+                )):
+                    continue
 
-                chunk = chunk[:remaining]
-                chunks.append(chunk)
-                page_bytes += len(chunk)
-                total_bytes += len(chunk)
+                chunks = []
+                page_bytes = 0
 
-            encoding = response.encoding or "utf-8"
-            body = b"".join(chunks).decode(encoding, errors="ignore")
-            body_lower = body.lower()
-
-            pages += 1
-
-            for keyword in KEYWORDS:
-                if keyword in body_lower:
-                    matched_all.add(keyword)
-
-            if "text/html" in content_type:
-                links = re.findall(
-                    r'''href\s*=\s*["']([^"']+)["']''',
-                    body,
-                    re.IGNORECASE
-                )
-
-                for link in links:
-                    next_url = urljoin(current, link.strip())
-
-                    try:
-                        parsed = urlparse(next_url)
-                        next_host = normalize_host(parsed.hostname)
-                    except (ValueError, AttributeError):
+                for chunk in response.iter_content(8192):
+                    if not chunk:
                         continue
 
-                    if parsed.scheme in ("http", "https") and next_host == host:
-                        if next_url not in seen:
-                            queue.append(next_url)
+                    remaining = min(
+                        MAX_PAGE_BYTES - page_bytes,
+                        MAX_TOTAL_BYTES - total_bytes
+                    )
 
-        except (requests.RequestException, ValueError):
-            continue
+                    if remaining <= 0:
+                        break
 
-        finally:
-            if response is not None:
+                    chunk = chunk[:remaining]
+                    chunks.append(chunk)
+                    page_bytes += len(chunk)
+                    total_bytes += len(chunk)
+
+                body = b"".join(chunks).decode(
+                    response.encoding or "utf-8",
+                    errors="ignore"
+                )
+
+                pages += 1
+                body_lower = body.lower()
+
+                for keyword in KEYWORDS:
+                    if keyword in body_lower:
+                        matched_all.add(keyword)
+
+                if "text/html" in content_type:
+                    links = re.findall(
+                        r'''href\s*=\s*["']([^"']+)["']''',
+                        body,
+                        re.IGNORECASE
+                    )
+
+                    for link in links:
+                        next_url = urljoin(current, link.strip())
+
+                        try:
+                            parsed = urlparse(next_url)
+                            next_host = normalize_host(parsed.hostname)
+                        except (ValueError, AttributeError):
+                            continue
+
+                        if parsed.scheme in ("http", "https") and next_host == host:
+                            if next_url not in seen:
+                                queue.append(next_url)
+
+            finally:
                 response.close()
 
+        except (requests.RequestException, ValueError) as exc:
+            errors.append(str(exc))
+            continue
+
     matched = sorted(matched_all)
+
+    if pages == 0:
+        message = "; ".join(errors[:3]) or "Sayfa içeriği okunamadı."
+        save_failed_scan(start_url, host, message)
+        return "Tarama başarısız", [], message, 0, message
+
     rating, reason = calculate_rating(matched)
 
     if rating >= 4:
@@ -310,6 +377,9 @@ def scan_one(raw):
         f"HTTP {http_code}; {pages} sayfa incelendi; "
         f"{total_bytes} bayt veri kontrol edildi."
     )
+
+    if errors:
+        note += " Bazı sayfalar incelenemedi."
 
     with db() as con:
         con.execute("""
@@ -339,97 +409,9 @@ def create_csrf_token():
 
 def check_csrf():
     token = request.form.get("csrf_token", "")
+
     if not token or token != session.get("csrf_token"):
         abort(400)
-
-
-@app.route("/", methods=["GET", "POST"])
-def index():
-    if request.method == "POST":
-        check_csrf()
-
-        action = request.form.get("action", "scan")
-        raw = request.form.get("url", "")
-
-        try:
-            if action == "add":
-                url, _ = validate_public_url(raw)
-
-                with db() as con:
-                    con.execute(
-                        "INSERT OR IGNORE INTO watchlist(url) VALUES(?)",
-                        (url,)
-                    )
-
-                flash("Adres izleme listesine eklendi.", "success")
-
-            elif action == "scan":
-                if not scan_lock.acquire(blocking=False):
-                    flash("Başka bir tarama devam ediyor. Biraz bekle.", "error")
-                else:
-                    try:
-                        status, matched, note, rating, reason = scan_one(raw)
-                        flash(
-                            f"{status} | Risk puanı: {rating}/5 | "
-                            f"Eşleşmeler: {', '.join(matched) if matched else 'yok'} | "
-                            f"{note}",
-                            "success"
-                        )
-                    finally:
-                        scan_lock.release()
-
-            elif action == "scan_watch":
-                scan_watchlist()
-
-            elif action == "toggle":
-                item_id = request.form.get("item_id", type=int)
-                with db() as con:
-                    con.execute("""
-                        UPDATE watchlist
-                        SET enabled = CASE WHEN enabled=1 THEN 0 ELSE 1 END
-                        WHERE id=?
-                    """, (item_id,))
-                flash("İzleme ayarı güncellendi.", "success")
-
-            elif action == "delete":
-                item_id = request.form.get("item_id", type=int)
-                with db() as con:
-                    con.execute("DELETE FROM watchlist WHERE id=?", (item_id,))
-                flash("Adres izleme listesinden silindi.", "success")
-
-        except ValueError as exc:
-            flash(str(exc), "error")
-        except Exception:
-            app.logger.exception("İşlem sırasında hata oluştu.")
-            flash("İşlem tamamlanamadı. Adresi ve bağlantıyı kontrol et.", "error")
-
-        return redirect(url_for("index"))
-
-    with db() as con:
-        scans = con.execute("""
-            SELECT * FROM scans ORDER BY id DESC LIMIT 50
-        """).fetchall()
-
-        watch = con.execute("""
-            SELECT * FROM watchlist ORDER BY id DESC
-        """).fetchall()
-
-        total_scans = con.execute(
-            "SELECT COUNT(*) FROM scans"
-        ).fetchone()[0]
-
-        high_risk = con.execute(
-            "SELECT COUNT(*) FROM scans WHERE rating >= 4"
-        ).fetchone()[0]
-
-    return render_template(
-        "index.html",
-        scans=scans,
-        watch=watch,
-        total_scans=total_scans,
-        high_risk=high_risk,
-        csrf_token=session["csrf_token"]
-    )
 
 
 def scan_watchlist():
@@ -457,12 +439,132 @@ def scan_watchlist():
                 count += 1
 
             except Exception:
-                app.logger.exception("İzleme adresi taranamadı: %s", item["url"])
+                app.logger.exception("İzleme adresi taranamadı.")
 
     finally:
         scan_lock.release()
 
     return count
+
+
+@app.route("/", methods=["GET", "POST"])
+def index():
+    if request.method == "POST":
+        check_csrf()
+        action = request.form.get("action", "")
+        raw = request.form.get("url", "")
+
+        try:
+            if action == "scan":
+                if not scan_lock.acquire(blocking=False):
+                    flash("Başka bir tarama devam ediyor. Biraz bekle.", "error")
+                else:
+                    try:
+                        status, matched, note, rating, reason = scan_one(raw)
+
+                        if rating == 0:
+                            flash(
+                                f"{status}: {note}",
+                                "error"
+                            )
+                        else:
+                            flash(
+                                f"{status} | Risk puanı: {rating}/5 | "
+                                f"Eşleşmeler: {', '.join(matched) if matched else 'yok'} | {note}",
+                                "success"
+                            )
+                    finally:
+                        scan_lock.release()
+
+            elif action == "add":
+                url, _ = validate_public_url(raw)
+
+                with db() as con:
+                    con.execute(
+                        "INSERT OR IGNORE INTO watchlist(url) VALUES(?)",
+                        (url,)
+                    )
+
+                flash("Adres izleme listesine eklendi.", "success")
+
+            elif action == "scan_watch":
+                count = scan_watchlist()
+                flash(f"İzleme listesinden {count} adres kontrol edildi.", "success")
+
+            elif action == "toggle":
+                item_id = request.form.get("item_id", type=int)
+
+                with db() as con:
+                    con.execute("""
+                        UPDATE watchlist
+                        SET enabled = CASE WHEN enabled=1 THEN 0 ELSE 1 END
+                        WHERE id=?
+                    """, (item_id,))
+
+                flash("İzleme ayarı güncellendi.", "success")
+
+            elif action == "delete":
+                item_id = request.form.get("item_id", type=int)
+
+                with db() as con:
+                    con.execute("DELETE FROM watchlist WHERE id=?", (item_id,))
+
+                flash("Adres izleme listesinden silindi.", "success")
+
+            elif action == "reset_stats":
+                with db() as con:
+                    con.execute("""
+                        UPDATE settings
+                        SET value=?
+                        WHERE name='counter_reset_at'
+                    """, (now(),))
+
+                flash(
+                    "Sayaçlar sıfırlandı. Eski tarama geçmişin korunuyor.",
+                    "success"
+                )
+
+        except ValueError as exc:
+            flash(str(exc), "error")
+
+        except Exception:
+            app.logger.exception("İşlem sırasında hata oluştu.")
+            flash("İşlem tamamlanamadı. Lütfen tekrar dene.", "error")
+
+        return redirect(url_for("index"))
+
+    with db() as con:
+        reset_row = con.execute("""
+            SELECT value FROM settings WHERE name='counter_reset_at'
+        """).fetchone()
+
+        reset_at = reset_row["value"] if reset_row else "1970-01-01T00:00:00+00:00"
+
+        scans = con.execute("""
+            SELECT * FROM scans ORDER BY id DESC LIMIT 50
+        """).fetchall()
+
+        watch = con.execute("""
+            SELECT * FROM watchlist ORDER BY id DESC
+        """).fetchall()
+
+        total_scans = con.execute("""
+            SELECT COUNT(*) FROM scans WHERE checked_at >= ?
+        """, (reset_at,)).fetchone()[0]
+
+        high_risk = con.execute("""
+            SELECT COUNT(*) FROM scans
+            WHERE checked_at >= ? AND rating >= 4
+        """, (reset_at,)).fetchone()[0]
+
+    return render_template(
+        "index.html",
+        scans=scans,
+        watch=watch,
+        total_scans=total_scans,
+        high_risk=high_risk,
+        csrf_token=session["csrf_token"]
+    )
 
 
 def automatic_scan_loop():
@@ -477,8 +579,7 @@ def automatic_scan_loop():
                 """).fetchone()
 
             last_scan = row["value"] if row else ""
-
-            should_scan = True
+            should_scan = not last_scan
 
             if last_scan:
                 try:
@@ -499,24 +600,20 @@ def automatic_scan_loop():
                         WHERE name='last_auto_scan'
                     """, (now(),))
 
-                app.logger.info(
-                    "Otomatik tarama tamamlandı. Kontrol edilen adres: %s",
-                    count
-                )
+                app.logger.info("Otomatik tarama tamamlandı: %s adres.", count)
 
         except Exception:
-            app.logger.exception("Otomatik tarama döngüsü hata verdi.")
+            app.logger.exception("Otomatik tarama hatası.")
             time.sleep(60)
 
 
 init_db()
 
 if os.environ.get("DISABLE_AUTO_SCAN", "0") != "1":
-    scheduler_thread = threading.Thread(
+    threading.Thread(
         target=automatic_scan_loop,
         daemon=True
-    )
-    scheduler_thread.start()
+    ).start()
 
 
 if __name__ == "__main__":
